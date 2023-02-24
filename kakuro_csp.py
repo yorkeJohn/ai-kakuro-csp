@@ -9,7 +9,7 @@ from collections import deque
 
 class KakuroConstraint:
     '''
-    A class representing a Kakuro variable-sum constraint.
+    A class representing a Kakuro variable-sum alldiff constraint.
     '''
     def __init__(self, variables: List[tuple], sum: int) -> None:
         '''
@@ -17,8 +17,8 @@ class KakuroConstraint:
             variables (list): Variables included in the constraint.
             sum (int): Required sum.
         '''
-        self.variables = variables
-        self.sum = sum
+        self.variables: List[tuple] = variables
+        self.sum: int = sum
 
     def is_satisfied(self, assignment: Dict[tuple, int]) -> bool:
         '''
@@ -29,9 +29,12 @@ class KakuroConstraint:
         Returns:
             bool: True if the constraint is satisfied, False otherwise.
         '''
-        if not all(variable in assignment.keys() for variable in self.variables):
+        values: List[int] = [assignment[v] for v in self.variables if v in assignment]
+        if not len(set(values)) == len(values): # alldiff constraint
+            return False
+        if not all(v in assignment.keys() for v in self.variables):
            return True
-        return sum([assignment[variable] for variable in self.variables]) == self.sum
+        return sum(values) == self.sum # sum constraint
     
 class KakuroCSP:
     '''

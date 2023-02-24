@@ -39,6 +39,5 @@
         { "row": 6, "col": 5, "sum": 3,  "type": "h" },
         { "row": 7, "col": 1, "sum": 17, "type": "h" },
         { "row": 7, "col": 5, "sum": 4,  "type": "h" }
-
     ]
 }

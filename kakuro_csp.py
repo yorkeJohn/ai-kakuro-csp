@@ -9,7 +9,7 @@ from collections import deque
 
 class KakuroConstraint:
     '''
-    A class representing a Kakuro variable-sum alldiff constraint.
+    A class representing a Kakuro constraint where unique variables must sum to a specified value.
     '''
     def __init__(self, variables: List[tuple], sum: int) -> None:
         '''

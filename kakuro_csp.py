@@ -3,7 +3,7 @@ Author: John Yorke
 CSCI 3482 - Artificial Intelligence - Saint Mary's University
 '''
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Set, Optional
 from copy import deepcopy
 from collections import deque
 
@@ -71,7 +71,7 @@ class KakuroCSP:
     
     def node_consistency(self) -> bool:
         '''
-        Node Consistency algorithm for domain pruning.
+        Node Consistency algorithm for domain pruning. Does nothing if nc=false.
 
         Returns:
             bool: True if consistency is established, False otherwise.
@@ -126,7 +126,7 @@ class KakuroCSP:
                         return False
         return True
     
-    def get_arcs(self, unassigned: List[tuple]) -> List[tuple[tuple, tuple]]:
+    def get_arcs(self, unassigned: List[tuple]) -> Set[tuple[tuple, tuple]]:
         '''
         Gets all arcs in the unassigned variables of the CSP.
 
@@ -155,7 +155,7 @@ class KakuroCSP:
         queue = deque(self.get_arcs(unassigned))
         while queue:
             xi, xj = queue.popleft()
-            if self.revise(xi, xj, {**assignment}):
+            if self.revise(xi, xj, assignment.copy()):
                 if not self.domains[xi]:
                     return False
                 for constraint in self.constraints[xi]:   
@@ -265,22 +265,20 @@ class KakuroCSP:
             optional: A solution if one exists.
         '''
         if len(assignment) == len(self.variables):
-            return assignment
+            return assignment # if all variables are assigned, the solution is found
 
         unassigned: List[tuple] = [v for v in self.variables if v not in assignment]
         variable: tuple = self.select_variable(unassigned)
 
         for value in self.order_domain(variable, assignment, unassigned):
-            self.steps += 1 # every assignment is a step
+            self.steps += 1 # count a step each time a variable is tested
             last_domains: Dict[tuple, List[int]] = deepcopy(self.domains)
 
-            new_assignment: Dict[tuple, int] = assignment.copy()
-            new_assignment[variable] = value
-
+            new_assignment: Dict[tuple, int] = {**assignment, variable: value}
             if self.is_consistent(variable, new_assignment):
                 if self.forward_check(variable, unassigned, new_assignment) and self.mac(unassigned, new_assignment):
                     result: Optional[Dict[tuple, int]] = self.search(new_assignment)
-
+                    # if a result is found, return it
                     if result:
                         return result
 

@@ -50,9 +50,10 @@ class KakuroCSP:
                                                                  for v in self.variables}
         self.options: Dict[str, bool] = options
         self.steps: int = 0
+        self.unassigned: List[tuple] = self.variables.copy()
 
         self.node_consistency()
-        self.ac_3(self.variables, {})
+        self.ac_3({})
 
     def is_consistent(self, variable: tuple, assignment: Dict[tuple, int]) -> bool:
         '''
@@ -88,27 +89,25 @@ class KakuroCSP:
                 return False
         return True
 
-    def get_neighbours(self, variable: tuple, unassigned: List[tuple]) -> List[tuple]:
+    def get_neighbours(self, variable: tuple) -> List[tuple]:
         '''
         Gets all unassigned neighbours of a variable.
 
         Params:
             variable (tuple): Variable to get neighbours.
-            unassigned (list): Unassigned variables.
         Returns:
             list: A list of neighbour variables.
         '''
-        return [u for u in unassigned if u in 
+        return [u for u in self.unassigned if u in 
                 [v for c in self.constraints[variable] for v in c.variables] 
                 and u != variable]
 
-    def forward_check(self, variable: tuple, unassigned: List[tuple], assignment: Dict[tuple, int]) -> bool:
+    def forward_check(self, variable: tuple, assignment: Dict[tuple, int]) -> bool:
         '''
         Forward Checking algorithm for constraint propogation. Does nothing if fc=false.
 
         Params:
             variable (tuple): Variable to forward check neighbours.
-            unassigned (list): Unassigned variables.
             assignment (dict): Current assignment.
         Returns:
             bool: True if consistency is established, False otherwise.
@@ -116,7 +115,7 @@ class KakuroCSP:
         if not self.options['fc']:
             return True
         
-        for neighbour in self.get_neighbours(variable, unassigned):
+        for neighbour in self.get_neighbours(variable):
             for value in self.domains[neighbour].copy(): 
 
                 if not self.is_consistent(variable, {**assignment, neighbour: value}):
@@ -126,25 +125,22 @@ class KakuroCSP:
                         return False
         return True
     
-    def get_arcs(self, unassigned: List[tuple]) -> Set[tuple[tuple, tuple]]:
+    def get_arcs(self) -> Set[tuple[tuple, tuple]]:
         '''
         Gets all arcs in the unassigned variables of the CSP.
 
-        Params:
-            unassigned (list): Unassigned variables.
         Returns:
             list: A list of all arcs.
         '''
         return {(v1, v2) for constraints in self.constraints.values()
                 for c in constraints for v1 in c.variables for v2 in c.variables 
-                if v1 != v2 and v2 in unassigned}
+                if v1 != v2 and v2 in self.unassigned}
 
-    def ac_3(self, unassigned: List[tuple], assignment: Dict[tuple, int]) -> bool:
+    def ac_3(self, assignment: Dict[tuple, int]) -> bool:
         '''
         AC-3 (Arc Consistency 3) algorithm for constraint propagation. Does nothing if ac3=false.
 
         Params:
-            unassigned (list): Unassigned variables.
             assignment (dict): Current assignment.
         Returns:
             bool: True if consistency is established, False otherwise.
@@ -152,7 +148,7 @@ class KakuroCSP:
         if not self.options['ac3']:
             return True
 
-        queue = deque(self.get_arcs(unassigned))
+        queue = deque(self.get_arcs())
         while queue:
             xi, xj = queue.popleft()
             if self.revise(xi, xj, assignment.copy()):
@@ -186,41 +182,38 @@ class KakuroCSP:
                 revised = True
         return revised
     
-    def mac(self, unassigned: List[tuple], assignment: Dict[tuple, int]) -> bool:
+    def mac(self, assignment: Dict[tuple, int]) -> bool:
         '''
         MAC (Maintaining Arc Consistency) extension of AC-3. Does nothing if mac=false.
 
         Params:
-            unassigned (list): Unassigned variables.
             assignment (dict): Current assignment.
         Returns:
             bool: True if consistency is established, False otherwise.
         '''
         if not self.options['mac']:
             return True
-        return self.ac_3(unassigned, assignment)
+        return self.ac_3(assignment)
     
-    def select_variable(self, unassigned: List[tuple]) -> tuple:
+    def select_variable(self) -> tuple:
         '''
         Selects an unassigned variable.
         Uses MRV (Minimum Remaining Value) heuristic if mrv=true, first variable otherwise.
 
-        Params:
-            unassigned (list): Unassigned variables.
         Returns:
             tuple: A variable.
         '''
         if not self.options['mrv']:
-            return unassigned[0]
-        return min(unassigned, key=lambda var: len(self.domains[var]))
+            return self.unassigned[0]
+        return min(self.unassigned, key=lambda var: len(self.domains[var]))
         '''
         Degree Heuristic:
-            return min(unassigned, key=lambda var: sum([len(constraint.variables) for constraint in self.constraints[var]]))
+            return min(self.unassigned, key=lambda var: sum([len(c.variables) for c in self.constraints[var]]))
         Random:
-            return random.choice(unassigned)
+            return random.choice(self.unassigned)
         '''
     
-    def order_domain(self, variable: tuple, assignment: Dict[tuple, int], unassigned: List[tuple]) -> List[int]:
+    def order_domain(self, variable: tuple, assignment: Dict[tuple, int]) -> List[int]:
         '''
         Gets the ordered domain of a variable.
         Uses LCV (Least Constraining Value) heuristic if lcv=true, does nothing otherwise.
@@ -228,15 +221,14 @@ class KakuroCSP:
         Params:
             variable (tuple): Variable to get domain.
             assignment (dict): Current assignment.
-            unassigned (list): Unassigned variables.
         Returns:
             list: An ordered domain.
         '''
         if not self.options['lcv']:
             return self.domains[variable]
-        return sorted(self.domains[variable], key=lambda value: self.count_conflicts(value, variable, assignment, unassigned))
+        return sorted(self.domains[variable], key=lambda value: self.count_conflicts(value, variable, assignment))
     
-    def count_conflicts(self, value: int, variable: tuple, assignment: Dict[tuple, int], unassigned: List[tuple]) -> int:
+    def count_conflicts(self, value: int, variable: tuple, assignment: Dict[tuple, int]) -> int:
         '''
         Counts the neighbour conflicts when a value is assigned to a variable.
 
@@ -244,12 +236,11 @@ class KakuroCSP:
             value (int): Value to test.
             variable (tuple): Variable to assign.
             assignment (dict): Current assignment.
-            unassigned (list): Unassigned variables.
         Returns:
             int: The number of conflicts.
         '''
         conflicts: int = 0
-        for neighbour in self.get_neighbours(variable, unassigned):
+        for neighbour in self.get_neighbours(variable):
             for n_value in self.domains[neighbour]: 
                 if not self.is_consistent(neighbour, {**assignment, neighbour: n_value, variable: value}):
                     conflicts+= 1
@@ -267,16 +258,16 @@ class KakuroCSP:
         if len(assignment) == len(self.variables):
             return assignment # if all variables are assigned, the solution is found
 
-        unassigned: List[tuple] = [v for v in self.variables if v not in assignment]
-        variable: tuple = self.select_variable(unassigned)
+        self.unassigned = [v for v in self.variables if v not in assignment]
+        variable: tuple = self.select_variable()
 
-        for value in self.order_domain(variable, assignment, unassigned):
+        for value in self.order_domain(variable, assignment):
             self.steps += 1 # count a step each time a variable is tested
             last_domains: Dict[tuple, List[int]] = deepcopy(self.domains)
 
             new_assignment: Dict[tuple, int] = {**assignment, variable: value}
             if self.is_consistent(variable, new_assignment):
-                if self.forward_check(variable, unassigned, new_assignment) and self.mac(unassigned, new_assignment):
+                if self.forward_check(variable, new_assignment) and self.mac(new_assignment):
                     result: Optional[Dict[tuple, int]] = self.search(new_assignment)
                     # if a result is found, return it
                     if result:

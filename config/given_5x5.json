@@ -1,0 +1,29 @@
+{
+    "options": {
+        "fc": true,
+        "ac3": true,
+        "mac": true,
+        "nc": true,
+        "mrv": true,
+        "lcv": true
+    },
+    "rows": 5,
+    "cols": 5,
+    "board": [
+        ["#", "#", "#", "#", "#"],
+        ["#", "0", "0", "#", "#"],
+        ["#", "0", "0", "0", "0"],
+        ["#", "0", "0", "0", "0"],
+        ["#", "#", "#", "0", "0"]
+    ],
+    "constraints": [
+        { "row": 1, "col": 2, "sum": 24, "type": "v" },
+        { "row": 1, "col": 3, "sum": 21, "type": "v" },
+        { "row": 2, "col": 1, "sum": 17, "type": "h" },
+        { "row": 2, "col": 4, "sum": 23, "type": "v" },
+        { "row": 2, "col": 5, "sum": 24, "type": "v" },
+        { "row": 3, "col": 1, "sum": 30, "type": "h" },
+        { "row": 4, "col": 1, "sum": 29, "type": "h" },
+        { "row": 5, "col": 3, "sum": 16, "type": "h" }
+    ]
+}

@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
     kakuro: KakuroCSP = KakuroCSP(variables, constraints, options)
 
-    solution: Optional[Dict[tuple, int]] = kakuro.bt_search()
+    solution: Optional[Dict[tuple, int]] = kakuro.search()
 
     # report the solution
     solution_str: str = f'Options: {options}\nSolution: {solution}\nSteps: {kakuro.steps}\n\n'

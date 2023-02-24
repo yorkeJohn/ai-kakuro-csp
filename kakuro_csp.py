@@ -220,7 +220,7 @@ class KakuroCSP:
             return random.choice(unassigned)
         '''
     
-    def ordered_domain(self, variable: tuple, assignment: Dict[tuple, int], unassigned: List[tuple]) -> List[int]:
+    def order_domain(self, variable: tuple, assignment: Dict[tuple, int], unassigned: List[tuple]) -> List[int]:
         '''
         Gets the ordered domain of a variable.
         Uses LCV (Least Constraining Value) heuristic if lcv=true, does nothing otherwise.
@@ -255,7 +255,7 @@ class KakuroCSP:
                     conflicts+= 1
         return conflicts
 
-    def bt_search(self, assignment: Dict[tuple, int] = {}) -> Optional[Dict[tuple, int]]:
+    def search(self, assignment: Dict[tuple, int] = {}) -> Optional[Dict[tuple, int]]:
         '''
         Backtracking Search algorithm.
 
@@ -270,21 +270,21 @@ class KakuroCSP:
         unassigned: List[tuple] = [v for v in self.variables if v not in assignment]
         variable: tuple = self.select_variable(unassigned)
 
-        for value in self.ordered_domain(variable, assignment, unassigned):
+        for value in self.order_domain(variable, assignment, unassigned):
             self.steps += 1 # every assignment is a step
             last_domains: Dict[tuple, List[int]] = deepcopy(self.domains)
 
-            local_assignment: Dict[tuple, int] = assignment.copy()
-            local_assignment[variable] = value
+            new_assignment: Dict[tuple, int] = assignment.copy()
+            new_assignment[variable] = value
 
-            if self.is_consistent(variable, local_assignment):
-                if self.forward_check(variable, unassigned, local_assignment) and self.mac(unassigned, local_assignment):
-                    result: Optional[Dict[tuple, int]] = self.bt_search(local_assignment)
+            if self.is_consistent(variable, new_assignment):
+                if self.forward_check(variable, unassigned, new_assignment) and self.mac(unassigned, new_assignment):
+                    result: Optional[Dict[tuple, int]] = self.search(new_assignment)
 
-                    if result is not None:
+                    if result:
                         return result
 
-            # if using forward checking or AC-3, restore domains when backtrack
+            # if we are using FC or MAC, restore domains when we backtrack
             if self.options['fc'] or self.options['mac']:
                 self.domains = deepcopy(last_domains)
         return None

@@ -68,9 +68,8 @@ class KakuroCSP:
         Returns:
             bool: True if consistent, False otherwise.
         '''
-        for constraint in self.constraints[variable]:
-            if not constraint.is_satisfied(assignment):
-                return False
+        if not all(c.is_satisfied(assignment) for c in self.constraints[variable]):
+            return False
         return True
     
     def node_consistency(self) -> bool:
@@ -86,7 +85,7 @@ class KakuroCSP:
         for variable in self.variables:
             min_sum: int = min(c.sum for c in self.constraints[variable])
             min_vars: int = min(len(c.variables) for c in self.constraints[variable])
-            self.domains[variable] = list(filter(lambda value: value <= min_sum - min_vars + 1, self.domains[variable]))
+            self.domains[variable] = [value for value in self.domains[variable] if value <= min_sum - min_vars + 1]
 
             if not self.domains[variable]:
                 return False
@@ -118,14 +117,11 @@ class KakuroCSP:
         if not self.options['fc']:
             return True
         
-        for neighbour in self.get_neighbours(variable):
-            for value in self.domains[neighbour].copy(): 
-
-                if not self.is_consistent(variable, {**assignment, neighbour: value}):
-                    self.domains[neighbour].remove(value)
-
-                    if not self.domains[neighbour]:
-                        return False
+        for n in self.get_neighbours(variable):
+            self.domains[n] = [value for value in self.domains[n] 
+                               if self.is_consistent(variable, {**assignment, n: value})]
+            if not self.domains[n]:
+                return False
         return True
     
     def get_arcs(self) -> Set[tuple[tuple, tuple]]:
@@ -157,10 +153,8 @@ class KakuroCSP:
             if self.revise(xi, xj, assignment.copy()):
                 if not self.domains[xi]:
                     return False
-                for constraint in self.constraints[xi]:   
-                    for xk in constraint.variables:
-                        if xk != xj:
-                            queue.append((xk, xi))
+                for c in self.constraints[xi]:
+                    queue.extend([(xk, xi) for xk in c.variables if xk is not xj])
         return True
 
     def revise(self, xi: tuple, xj: tuple, assignment: Dict[tuple, int]) -> bool:
@@ -177,10 +171,8 @@ class KakuroCSP:
         revised = False
         for vi in self.domains[xi].copy():
             assignment[xi] = vi
-            if not any(constraint.is_satisfied({**assignment, xj: vj}) 
-                       for constraint in self.constraints[xi] 
-                       if xj in constraint.variables 
-                       for vj in self.domains[xj]):
+            if not any(c.is_satisfied({**assignment, xj: vj}) for c in self.constraints[xi] 
+                       if xj in c.variables for vj in self.domains[xj]):
                 self.domains[xi].remove(vi)
                 revised = True
         return revised
@@ -242,13 +234,9 @@ class KakuroCSP:
         Returns:
             int: The number of conflicts.
         '''
-        conflicts: int = 0
-        for neighbour in self.get_neighbours(variable):
-            for n_value in self.domains[neighbour]: 
-                if not self.is_consistent(neighbour, {**assignment, neighbour: n_value, variable: value}):
-                    conflicts+= 1
-        return conflicts
-
+        return sum(not self.is_consistent(n, {**assignment, n: n_value, variable: value}) 
+                   for n in self.get_neighbours(variable) for n_value in self.domains[n])
+    
     def search(self, assignment: Dict[tuple, int] = {}) -> Optional[Dict[tuple, int]]:
         '''
         Backtracking Search algorithm.

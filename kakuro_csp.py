@@ -114,12 +114,13 @@ class KakuroCSP:
         Returns:
             bool: True if consistency is established, False otherwise.
         '''
-        if not self.options['fc']:
+        if not self.options['fc'] or self.options['mac']: # MAC handles forward checking so don't do both
             return True
         
         for n in self.get_neighbours(variable):
-            self.domains[n] = [value for value in self.domains[n] 
-                               if self.is_consistent(variable, {**assignment, n: value})]
+            for value in self.domains[n].copy():
+                if not any(c.is_satisfied({**assignment, n: value}) for c in self.constraints[n] if variable in c.variables):
+                    self.domains[n].remove(value)
             if not self.domains[n]:
                 return False
         return True
@@ -258,7 +259,7 @@ class KakuroCSP:
 
             new_assignment: Dict[tuple, int] = {**assignment, variable: value}
             if self.is_consistent(variable, new_assignment):
-                if self.forward_check(variable, new_assignment) and self.mac(new_assignment):
+                if self.mac(new_assignment) and self.forward_check(variable, new_assignment):
                     result: Optional[Dict[tuple, int]] = self.search(new_assignment)
                     # if a result is found, return it
                     if result:

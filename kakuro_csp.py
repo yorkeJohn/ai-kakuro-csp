@@ -68,9 +68,7 @@ class KakuroCSP:
         Returns:
             bool: True if consistent, False otherwise.
         '''
-        if not all(c.is_satisfied(assignment) for c in self.constraints[variable]):
-            return False
-        return True
+        return all(c.is_satisfied(assignment) for c in self.constraints[variable])
     
     def node_consistency(self) -> bool:
         '''
